@@ -4,8 +4,8 @@ import torch.nn as nn
 # 但实在太多代码块了，不方便管理，就直接用py文件写了
 """
 Tokenization 决定“编号怎么来”，Embedding 决定“编号怎么用”。
-
 """
+#这里是一些实验要用的矩阵参数
 B = 2      # batch size
 T = 4      # sequence length
 C = 8      # embedding dimension
