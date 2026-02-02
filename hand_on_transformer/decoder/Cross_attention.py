@@ -35,3 +35,38 @@ enc_out = [B, T_enc, C]
 
 Scores = T_tgt * T_src (每个 target token 看所有 source token 的相关性)
 """
+
+import torch
+
+x = torch.randn(2, 4, 8)  # decoder 输入 [B, T_dec, C]
+enc_out = torch.randn(2, 6, 8)  # encoder 输出 [B, T_enc, C]
+W_Q = torch.nn.Linear(8, 8)
+W_K = torch.nn.Linear(8, 8) 
+W_V = torch.nn.Linear(8, 8)
+Q = W_Q(x)           # [B, T_dec, C]
+K = W_K(enc_out)    # [B, T_enc, C]
+V = W_V(enc_out)    # [B, T_enc, C]
+import math
+def cross_attention(Q, K, V , H,src_key_padding_mask=None):
+    T_dec = Q.shape[1]        # T_dec
+    T_end = K.shape[1]        # T_enc
+    assert Q.shape[2] % H == 0
+    d_k = Q.shape[2] // H  # C // H
+    # 切分多头
+    Q = Q.view(Q.shape[0], T_dec, H, d_k).transpose(1, 2)   # [B, H, T_dec, d_k]
+    K = K.view(K.shape[0], T_end, H, d_k).transpose(1, 2)   # [B, H, T_enc, d_k]
+    V = V.view(V.shape[0], T_end, H, d_k).transpose(1, 2)   # [B, H, T_enc, d_k]
+
+    # 计算注意力得分
+    scores = (Q @ K.transpose(-1, -2)) / math.sqrt(d_k)  # [B, T_dec, T_enc]
+
+    if src_key_padding_mask is not None:
+        # [B, T_src] -> [B, 1, 1, T_src]，广播到所有 head 和所有 tgt 位置
+        mask = src_key_padding_mask.unsqueeze(1).unsqueeze(1)
+        scores = scores.masked_fill(mask, float("-inf"))
+    attn = torch.softmax(scores, dim=-1)              # [B, T_tgt, T_src]
+    out  = attn @ V                                   # [B, T_tgt, d]
+    out = out.transpose(1, 2).contiguous().view(out.shape[0], T_dec, -1)  # [B, T_dec, C]
+    return out
+out = cross_attention(Q, K, V, H=2)
+print(out.shape)
