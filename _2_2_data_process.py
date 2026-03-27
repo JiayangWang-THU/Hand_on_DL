@@ -21,3 +21,6 @@ import torch
 X = torch.tensor(inputs.to_numpy(dtype=float))
 y = torch.tensor(outputs.to_numpy(dtype=float))
 print(X, y)
+
+
+    
